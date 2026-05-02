@@ -534,9 +534,6 @@ ctxMenu.addEventListener('click', async e => {
     case 'close-others':
       if (tab) chrome.tabs.remove(S.tabs.filter(t=>t.id!==id).map(t=>t.id));
       break;
-    case 'close-right':
-      if (tab) chrome.tabs.remove(S.tabs.filter(t=>t.index>tab.index).map(t=>t.id));
-      break;
   }
 });
 
