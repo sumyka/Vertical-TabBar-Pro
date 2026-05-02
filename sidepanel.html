@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>Vertical Tabs Pro</title>
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <button class="icon-btn" id="newTabBtn" title="新しいタブ">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </button>
+      <span class="tab-count" id="tabCount">0</span>
+    </div>
+    <!-- View switcher -->
+    <div class="view-switcher">
+      <button class="view-btn active" id="viewTabs" title="開いているタブ">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="18" rx="2"/><line x1="2" y1="9" x2="22" y2="9"/></svg>
+        タブ
+      </button>
+      <button class="view-btn" id="viewBookmarks" title="ブックマーク">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+        ブックマーク
+      </button>
+    </div>
+    <div class="toolbar-right">
+      <button class="icon-btn" id="searchBtn" title="検索 (Ctrl+F)">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </button>
+      <button class="icon-btn" id="settingsBtn" title="設定">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Search Bar -->
+  <div class="search-bar hidden" id="searchBar">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0;color:var(--text-muted)"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input type="text" id="searchInput" placeholder="検索..." autocomplete="off" spellcheck="false">
+    <button class="icon-btn" id="closeSearch">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+
+  <!-- Bookmark path breadcrumb -->
+  <div class="bm-breadcrumb hidden" id="bmBreadcrumb">
+    <button class="bm-back" id="bmBack">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <span id="bmPath">ブックマーク</span>
+  </div>
+
+  <!-- Main list -->
+  <div class="tab-list" id="tabList"></div>
+
+  <!-- Context Menu -->
+  <div class="ctx-menu hidden" id="ctxMenu">
+    <div class="ctx-item" data-action="activate">このタブに切り替え</div>
+    <div class="ctx-item" data-action="new-tab">新しいタブで開く</div>
+    <div class="ctx-item" data-action="duplicate">タブを複製</div>
+    <div class="ctx-sep"></div>
+    <div class="ctx-item" data-action="pin">ピン留め / 解除</div>
+    <div class="ctx-item" data-action="mute">ミュート / 解除</div>
+    <div class="ctx-sep"></div>
+    <div class="ctx-item" data-action="group-new">新しいグループを作成</div>
+    <div class="ctx-item" data-action="group-ungroup">グループを解除</div>
+    <div class="ctx-sep"></div>
+    <div class="ctx-item" data-action="move-window">新しいウィンドウに移動</div>
+    <div class="ctx-sep"></div>
+    <div class="ctx-item" data-action="copy-url">URLをコピー</div>
+    <div class="ctx-sep"></div>
+    <div class="ctx-item ctx-danger" data-action="close">タブを閉じる</div>
+    <div class="ctx-item ctx-danger" data-action="close-others">他のタブをすべて閉じる</div>
+    <div class="ctx-item ctx-danger" data-action="close-right">右側のタブをすべて閉じる</div>
+  </div>
+
+  <!-- Bookmark Context Menu -->
+  <div class="ctx-menu hidden" id="bmCtxMenu">
+    <div class="ctx-item" data-action="bm-open">開く</div>
+    <div class="ctx-item" data-action="bm-open-new">新しいタブで開く</div>
+    <div class="ctx-item" data-action="bm-copy-url">URLをコピー</div>
+    <div class="ctx-sep"></div>
+    <div class="ctx-item ctx-danger" data-action="bm-delete">ブックマークを削除</div>
+  </div>
+  <!-- Settings Panel -->
+  <div class="settings-panel hidden" id="settingsPanel">
+    <div class="settings-header">
+      <span class="settings-title">設定</span>
+      <button class="icon-btn" id="closeSettings">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="settings-body">
+      <div class="setting-group">
+        <label class="setting-label">UIサイズ</label>
+        <div class="btn-group" id="uiSizeGroup">
+          <button class="seg-btn" data-value="compact">コンパクト</button>
+          <button class="seg-btn active" data-value="normal">標準</button>
+          <button class="seg-btn" data-value="large">大きい</button>
+        </div>
+      </div>
+      <div class="setting-group">
+        <label class="setting-label">文字サイズ</label>
+        <div class="btn-group" id="fontSizeGroup">
+          <button class="seg-btn" data-value="xs">極小</button>
+          <button class="seg-btn" data-value="sm">小</button>
+          <button class="seg-btn active" data-value="md">中</button>
+          <button class="seg-btn" data-value="lg">大</button>
+          <button class="seg-btn" data-value="xl">極大</button>
+        </div>
+      </div>
+      <div class="setting-group">
+        <label class="setting-label">ファビコン位置</label>
+        <div class="btn-group" id="faviconPosGroup">
+          <button class="seg-btn active" data-value="left">◀ 左</button>
+          <button class="seg-btn" data-value="right">右 ▶</button>
+        </div>
+      </div>
+      <div class="setting-group">
+        <label class="setting-label">タブ名の揃え</label>
+        <div class="btn-group" id="textAlignGroup">
+          <button class="seg-btn active" data-value="left">左詰め</button>
+          <button class="seg-btn" data-value="right">右詰め</button>
+        </div>
+      </div>
+      <div class="setting-group">
+        <label class="setting-label">テーマ</label>
+        <div class="btn-group" id="themeGroup">
+          <button class="seg-btn active" data-value="dark">ダーク</button>
+          <button class="seg-btn" data-value="light">ライト</button>
+          <button class="seg-btn" data-value="midnight">深夜</button>
+        </div>
+      </div>
+      <div class="settings-footer">
+        <span class="version-tag">Vertical Tabs Pro v2.0</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bookmark Register Popup -->
+  <div class="bm-popup hidden" id="bmPopup">
+    <div class="bm-popup-inner">
+      <div class="bm-popup-header">
+        <span class="bm-popup-title">ブックマークに追加</span>
+        <button class="icon-btn" id="bmPopupClose">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="bm-popup-body">
+        <div class="bm-field">
+          <label class="bm-field-label">名前</label>
+          <input type="text" id="bmName" class="bm-input" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="bm-field">
+          <label class="bm-field-label">フォルダ</label>
+          <select id="bmFolder" class="bm-select"></select>
+        </div>
+      </div>
+      <div class="bm-popup-footer">
+        <button class="bm-btn-cancel" id="bmPopupCancel">キャンセル</button>
+        <button class="bm-btn-save" id="bmPopupSave">保存</button>
+      </div>
+    </div>
+  </div>
+
+
+</div>
+<script src="sidepanel.js"></script>
+</body>
+</html>
