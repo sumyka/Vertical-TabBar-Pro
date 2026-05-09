@@ -12,6 +12,7 @@ const S = {
   },
   query: '',
   drag: { id: null },
+  collapsedGroups: new Set(),
   ctx: { tabId: null, bmId: null, bmUrl: null },
 };
 
@@ -171,6 +172,45 @@ function makeTabEl(tab) {
   closeBtn.appendChild(closeSvg);
   el.appendChild(closeBtn);
 
+  // ── Marquee on hover ──
+  let marqueeTimer = null;
+  el.addEventListener('mouseenter', () => {
+    marqueeTimer = setTimeout(() => {
+      const nameEl = el.querySelector('.tab-name');
+      if (!nameEl) return;
+      const containerW = nameEl.offsetWidth;
+      const textW = nameEl.scrollWidth;
+      if (textW <= containerW) return; // no overflow, skip
+
+      const offset = -(textW - containerW + 8); // +8px gap
+      const duration = Math.max(2, textW / 60); // ~60px/s
+
+      nameEl.classList.add('scrolling');
+      nameEl.style.setProperty('--marquee-offset', offset + 'px');
+      nameEl.style.setProperty('--marquee-duration', duration + 's');
+
+      // Wrap text in span if not already
+      if (nameEl.firstChild?.nodeType === Node.TEXT_NODE) {
+        const span = document.createElement('span');
+        span.textContent = nameEl.textContent;
+        nameEl.textContent = '';
+        nameEl.appendChild(span);
+      }
+    }, 400); // slight delay before starting
+  });
+  el.addEventListener('mouseleave', () => {
+    clearTimeout(marqueeTimer);
+    const nameEl = el.querySelector('.tab-name');
+    if (!nameEl) return;
+    nameEl.classList.remove('scrolling');
+    nameEl.style.removeProperty('--marquee-offset');
+    nameEl.style.removeProperty('--marquee-duration');
+    // Unwrap span back to text
+    if (nameEl.firstChild?.tagName === 'SPAN') {
+      nameEl.textContent = nameEl.firstChild.textContent;
+    }
+  });
+
   // ── Events ──
   el.addEventListener('click', e => {
     if (e.target.closest('.tab-close')) return;
@@ -213,37 +253,37 @@ function makeTabEl(tab) {
   el.addEventListener('drop', async e => {
     e.preventDefault();
     if (!S.drag.id || S.drag.id === tab.id) { clearDragOver(); return; }
-    const rel = (e.clientY - el.getBoundingClientRect().top) / el.getBoundingClientRect().height;
-    const src = S.tabs.find(t => t.id === S.drag.id);
+    const rect = el.getBoundingClientRect();
+    const rel  = (e.clientY - rect.top) / rect.height;
+    const src  = S.tabs.find(t => t.id === S.drag.id);
+    const srcGroupId = src?.groupId ?? -1;
+    const UNGROUP_PX = 20;
     clearDragOver();
+
+    // Center zone: group drop
     if (rel >= 0.25 && rel <= 0.75) {
-      // ── Center drop: add to group ─────────────────────────────────────────
       if (tab.groupId && tab.groupId !== -1) {
         await chrome.tabs.group({ tabIds: S.drag.id, groupId: tab.groupId });
       } else {
         const colors = ['blue','red','yellow','green','pink','purple','cyan','grey'];
         const gid = await chrome.tabs.group({ tabIds: [tab.id, S.drag.id] });
-        await chrome.tabGroups.update(gid, { color: colors[gid%colors.length], title: 'グループ' });
+        await chrome.tabGroups.update(gid, { color: colors[gid % colors.length], title: 'グループ' });
       }
-    } else {
-      // ── Top/bottom drop: reorder ──────────────────────────────────────────
-      const srcGroupId = src?.groupId ?? -1;
-
-      // If dragged tab was in a group, ungroup it first then check if group is now single
-      if (srcGroupId !== -1) {
-        // Count remaining members after removal
-        const remaining = S.tabs.filter(t => t.groupId === srcGroupId && t.id !== S.drag.id);
-        await chrome.tabs.ungroup(S.drag.id);
-        if (remaining.length === 1) {
-          // Only one tab left — dissolve the group
-          await chrome.tabs.ungroup(remaining[0].id);
-        }
-      }
-
-      let idx = rel > 0.75 ? tab.index + 1 : tab.index;
-      if (src && src.index < tab.index) idx = Math.max(0, idx - 1);
-      await chrome.tabs.move(S.drag.id, { index: idx });
+      return;
     }
+
+    // Edge zone: reorder — ungroup only when dropping clearly outside the group
+    const dropFromEdgePx = Math.min(e.clientY - rect.top, rect.bottom - e.clientY);
+    const droppingOutside = srcGroupId !== -1 && tab.groupId !== srcGroupId;
+    if (droppingOutside && dropFromEdgePx > UNGROUP_PX) {
+      const remaining = S.tabs.filter(t => t.groupId === srcGroupId && t.id !== S.drag.id);
+      await chrome.tabs.ungroup(S.drag.id);
+      if (remaining.length === 1) await chrome.tabs.ungroup(remaining[0].id);
+    }
+
+    let idx = rel > 0.75 ? tab.index + 1 : tab.index;
+    if (src && src.index < tab.index) idx = Math.max(0, idx - 1);
+    await chrome.tabs.move(S.drag.id, { index: idx });
   });
 
   return el;
@@ -344,16 +384,15 @@ async function renderTabs() {
         };
 
         // Chevron / dot → collapse; name → edit
-        chevron.addEventListener('click', e => {
+        const toggleCollapse = e => {
           e.stopPropagation();
-          header.classList.toggle('collapsed');
-          inner.style.display = header.classList.contains('collapsed') ? 'none' : '';
-        });
-        dot.addEventListener('click', e => {
-          e.stopPropagation();
-          header.classList.toggle('collapsed');
-          inner.style.display = header.classList.contains('collapsed') ? 'none' : '';
-        });
+          const isCollapsed = header.classList.toggle('collapsed');
+          inner.style.display = isCollapsed ? 'none' : '';
+          if (isCollapsed) S.collapsedGroups.add(gid);
+          else S.collapsedGroups.delete(gid);
+        };
+        chevron.addEventListener('click', toggleCollapse);
+        dot.addEventListener('click', toggleCollapse);
         gname.addEventListener('click', e => {
           e.stopPropagation();
           if (gname.contentEditable !== 'true') startEdit();
@@ -369,6 +408,12 @@ async function renderTabs() {
           e.stopPropagation();
         });
         gname.addEventListener('blur', commitRename);
+        // Restore persisted collapsed state
+        if (S.collapsedGroups.has(gid)) {
+          header.classList.add('collapsed');
+          inner.style.display = 'none';
+        }
+
         container.appendChild(header);
         container.appendChild(inner);
         tabList.appendChild(container);
@@ -389,6 +434,21 @@ async function loadTabs() {
     const grps = await chrome.tabGroups.query({ windowId: chrome.windows.WINDOW_ID_CURRENT });
     grps.forEach(g => { S.groups[g.id] = g; });
   } catch {}
+
+  // Auto-dissolve any group that has only 1 tab
+  try {
+    for (const [gid] of Object.entries(S.groups)) {
+      const members = S.tabs.filter(t => t.groupId === Number(gid));
+      if (members.length === 1) {
+        await chrome.tabs.ungroup(members[0].id);
+        S.collapsedGroups.delete(Number(gid));
+      }
+    }
+    // Re-fetch after potential ungrouping
+    S.tabs = await chrome.tabs.query({ currentWindow: true });
+    S.tabs.sort((a,b) => a.index - b.index);
+  } catch {}
+
   if (S.view === 'tabs') renderTabs();
 }
 

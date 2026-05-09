@@ -111,8 +111,18 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,'Noto
 .tab-favicon-ph{width:var(--fav-size);height:var(--fav-size);flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--text-muted)}
 .tab-loading{width:var(--fav-size);height:var(--fav-size);flex-shrink:0;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.6s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-.tab-name{flex:1;font-size:var(--font-tab);color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;transition:color 0.1s}
+.tab-name{flex:1;font-size:var(--font-tab);color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;transition:color 0.1s;position:relative}
 .tab-item:hover .tab-name,.tab-item.active .tab-name{color:var(--text-primary)}
+
+/* Marquee scroll on hover */
+.tab-name.scrolling{text-overflow:clip;overflow:hidden}
+.tab-name.scrolling span{display:inline-block;animation:marquee var(--marquee-duration,6s) linear infinite}
+@keyframes marquee{
+  0%{transform:translateX(0)}
+  20%{transform:translateX(0)}
+  80%{transform:translateX(var(--marquee-offset,0px))}
+  100%{transform:translateX(var(--marquee-offset,0px))}
+}
 .tab-audio{flex-shrink:0;color:var(--accent);opacity:0.8}
 .tab-close{opacity:0;width:18px;height:18px;border:none;background:transparent;color:var(--text-muted);cursor:pointer;border-radius:3px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.1s;padding:0}
 .tab-item:hover .tab-close{opacity:1}
