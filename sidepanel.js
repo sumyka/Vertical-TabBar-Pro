@@ -708,6 +708,7 @@ async function showBmPopup(tab) {
 
   bmPopup.dataset.tabUrl   = tab.url || '';
   bmPopup.dataset.existingId = existing?.id || '';
+  bmPopup.dataset.existingParentId = existing?.parentId || '';
   bmPopup.classList.remove('hidden');
   setTimeout(() => bmName.focus(), 50);
 }
@@ -725,7 +726,10 @@ $('bmPopupSave').addEventListener('click', async () => {
   const existId  = bmPopup.dataset.existingId;
   try {
     if (existId) {
-      await chrome.bookmarks.update(existId, { title, parentId });
+      await chrome.bookmarks.update(existId, { title });
+      if (parentId && parentId !== bmPopup.dataset.existingParentId) {
+        await chrome.bookmarks.move(existId, { parentId });
+      }
     } else {
       await chrome.bookmarks.create({ parentId, title, url });
     }
